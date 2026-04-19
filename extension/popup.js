@@ -140,7 +140,27 @@ async function init() {
     setStatus('Profile loaded', 'ok');
   }
 
+  // Show debug info if title came up empty — helps diagnose LinkedIn DOM changes
+  if (!d.title && d._debug) {
+    const debugEl = document.createElement('details');
+    debugEl.style.cssText = 'margin-top:10px;padding:8px 10px;background:#fff8e1;border:1px solid #f5a623;border-radius:7px;font-size:11px';
+    debugEl.innerHTML = `
+      <summary style="cursor:pointer;font-weight:700;color:#7a4e00">Title not detected — show what the scraper saw</summary>
+      <pre style="margin-top:6px;white-space:pre-wrap;word-break:break-word;font-family:'DM Mono',monospace;font-size:10px;color:#555;line-height:1.4">${escapeHtml(JSON.stringify(d._debug, null, 2))}</pre>
+      <button type="button" id="copy-debug" style="margin-top:6px;padding:4px 10px;font-size:10px;border:1px solid #f5a623;background:white;border-radius:4px;cursor:pointer">Copy debug data</button>
+    `;
+    formEl.insertBefore(debugEl, formEl.querySelector('.actions'));
+    document.getElementById('copy-debug').addEventListener('click', () => {
+      navigator.clipboard.writeText(JSON.stringify(d._debug, null, 2));
+      document.getElementById('copy-debug').textContent = 'Copied ✓';
+    });
+  }
+
   formEl.style.display = 'block';
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
 }
 
 // ─── Save handler ───
