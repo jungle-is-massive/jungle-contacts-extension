@@ -89,7 +89,7 @@ async function getProfileFromTab() {
     try {
       return await chrome.tabs.sendMessage(tab.id, { type: 'scrapeProfile' });
     } catch (err) {
-      // Inject content script on demand and retry once
+      // Inject content script on demand and retry
       try {
         await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });
         return await chrome.tabs.sendMessage(tab.id, { type: 'scrapeProfile' });
@@ -99,21 +99,35 @@ async function getProfileFromTab() {
     }
   };
 
-  // First attempt
-  let result = await tryScrape();
+  // Poll up to 4s, every 250ms, looking for a result that has both name AND title.
+  // LinkedIn often renders the page in stages: name appears first, then headline.
+  const start = Date.now();
+  const TIMEOUT = 4000;
+  const INTERVAL = 250;
+  let result = null;
+  let bestSoFar = null;
 
-  // If we got nothing useful, give the page a beat to render and try again
-  if (result && result.ok && !result.data?.name) {
-    await new Promise(r => setTimeout(r, 350));
-    const retry = await tryScrape();
-    if (retry && retry.ok && retry.data?.name) result = retry;
+  while (Date.now() - start < TIMEOUT) {
+    result = await tryScrape();
+    if (result && result.ok) {
+      // Track the most-complete result we've seen, in case we time out
+      if (!bestSoFar || (result.data?.name && !bestSoFar.data?.name) ||
+          (result.data?.title && !bestSoFar.data?.title)) {
+        bestSoFar = result;
+      }
+      // If we have both name and title, we're done
+      if (result.data?.name && result.data?.title) return result;
+    }
+    await new Promise(r => setTimeout(r, INTERVAL));
   }
 
-  return result;
+  return bestSoFar || result;
 }
 
 async function init() {
   populateOrgDropdown();
+
+  setStatus('Scanning page…', '');
 
   const result = await getProfileFromTab();
 
@@ -219,5 +233,11 @@ formEl.addEventListener('submit', async (e) => {
 });
 
 $('cancel-btn').addEventListener('click', () => window.close());
+
+// Show extension version in the header so it's obvious which build is loaded
+try {
+  const v = chrome.runtime.getManifest().version;
+  $('version-label').textContent = `v${v}`;
+} catch (_) { /* ignore */ }
 
 init();
