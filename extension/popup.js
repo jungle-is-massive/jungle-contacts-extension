@@ -85,19 +85,31 @@ async function getProfileFromTab() {
     return { ok: false, reason: 'not-linkedin' };
   }
 
-  // Try sending a message to the existing content script.
-  // If the content script isn't loaded (e.g. page loaded before extension install), inject it.
-  try {
-    return await chrome.tabs.sendMessage(tab.id, { type: 'scrapeProfile' });
-  } catch (err) {
-    // Inject on demand and retry
+  const tryScrape = async () => {
     try {
-      await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });
       return await chrome.tabs.sendMessage(tab.id, { type: 'scrapeProfile' });
-    } catch (err2) {
-      return { ok: false, reason: 'scrape-failed', error: String(err2) };
+    } catch (err) {
+      // Inject content script on demand and retry once
+      try {
+        await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });
+        return await chrome.tabs.sendMessage(tab.id, { type: 'scrapeProfile' });
+      } catch (err2) {
+        return { ok: false, reason: 'scrape-failed', error: String(err2) };
+      }
     }
+  };
+
+  // First attempt
+  let result = await tryScrape();
+
+  // If we got nothing useful, give the page a beat to render and try again
+  if (result && result.ok && !result.data?.name) {
+    await new Promise(r => setTimeout(r, 350));
+    const retry = await tryScrape();
+    if (retry && retry.ok && retry.data?.name) result = retry;
   }
+
+  return result;
 }
 
 async function init() {
