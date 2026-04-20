@@ -18,17 +18,20 @@ const PLAN_URL = 'https://jungle-is-massive.github.io/intermediary-plan/';
 
 // Must match the IDs hardcoded in the intermediary-plan page.
 // If you add new intermediaries there, mirror them here.
-const INTERMEDIARIES = [
-  { id: 'aar', name: 'AAR', tier: 1 },
-  { id: 'ingenuity', name: 'Ingenuity+', tier: 1 },
-  { id: 'creativebrief', name: 'Creativebrief', tier: 1 },
-  { id: 'oystercatchers', name: 'Oystercatchers', tier: 1 },
-  { id: 'observatory', name: 'Observatory International', tier: 2 },
-  { id: 'tuffon', name: 'Tuffon Hall', tier: 2 },
-  { id: 'elevator', name: 'Nicky Bullard / Elevator', tier: 2 },
-  { id: 'gonetwork', name: 'The GO Network', tier: 2 },
-  { id: 'masterclassing', name: 'Masterclassing', tier: 3 },
-  { id: 'adassoc', name: 'Advertising Association', tier: 3 },
+// Loaded from Supabase at runtime — this is the fallback if Supabase is unreachable.
+// The dropdown is populated by loadIntermediaries() on init.
+let INTERMEDIARIES = [
+  { id: 'aar',                  name: 'AAR',                       tier: 1 },
+  { id: 'ingenuity',            name: 'Ingenuity+',                tier: 1 },
+  { id: 'creativebrief',        name: 'Creativebrief',             tier: 1 },
+  { id: 'oystercatchers',       name: 'Oystercatchers',            tier: 1 },
+  { id: 'observatory',          name: 'Observatory International', tier: 2 },
+  { id: 'tuffon',               name: 'Tuffon Hall',               tier: 2 },
+  { id: 'auditstar',            name: 'Auditstar',                 tier: 2 },
+  { id: 'individual_consultants', name: 'Individual Consultants',  tier: 2, isGroup: true },
+  { id: 'gonetwork',            name: 'The GO Network',            tier: 2 },
+  { id: 'masterclassing',       name: 'Masterclassing',            tier: 3 },
+  { id: 'adassoc',              name: 'Advertising Association',   tier: 3 },
 ];
 
 const $ = (id) => document.getElementById(id);
@@ -47,14 +50,39 @@ function showResult(html, cls) {
   resultEl.className = 'result ' + cls;
 }
 
+// Load intermediaries from Supabase — keeps the extension in sync without code updates
+async function loadIntermediaries() {
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/intermediaries?select=id,name,tier,category,website&order=tier.asc,name.asc`,
+      { headers: SB_HEADERS }
+    );
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.length > 0) {
+        INTERMEDIARIES = data.map(r => ({
+          id: r.id,
+          name: r.name,
+          tier: r.tier || 2,
+          isGroup: r.category === 'individual_consultant_group',
+          website: r.website || null,
+        }));
+      }
+    }
+  } catch (e) {
+    // Silently fall back to hardcoded list
+  }
+}
+
 // Populate the intermediary dropdown
 function populateOrgDropdown(defaultGuess) {
   const sel = $('org_id');
   sel.innerHTML =
     '<option value="">Select an intermediary…</option>' +
     INTERMEDIARIES.map(i =>
-      `<option value="${i.id}"${i.id === defaultGuess ? ' selected' : ''}>${i.name} (Tier ${i.tier})</option>`
-    ).join('');
+      `<option value="${i.id}"${i.id === defaultGuess ? ' selected' : ''}>${i.name}${i.isGroup ? ' — Individual Consultants' : ' (Tier ' + i.tier + ')'}</option>`
+    ).join('') +
+    '<option value="__new__">+ Add new intermediary…</option>';
 }
 
 // Heuristic: match the LinkedIn "current company" against our intermediary names
@@ -67,8 +95,11 @@ function guessOrg(company) {
   }
   // Manual synonym map for tricky cases
   const synonyms = {
-    'nicky bullard': 'elevator',
-    'the elevator': 'elevator',
+    'nicky bullard': 'individual_consultants',
+    'elevator': 'individual_consultants',
+    'alex young': 'individual_consultants',
+    'ay consulting': 'individual_consultants',
+    'auditstar': 'auditstar',
     'go network': 'gonetwork',
     'advertising association': 'adassoc',
   };
@@ -125,7 +156,31 @@ async function getProfileFromTab() {
 }
 
 async function init() {
+  await loadIntermediaries();
   populateOrgDropdown();
+
+  // Wire up the "Add new intermediary" inline handler
+  $('org_id').addEventListener('change', function() {
+    const existing = document.getElementById('new-intermediary-row');
+    if (this.value === '__new__') {
+      if (!existing) {
+        const row = document.createElement('div');
+        row.id = 'new-intermediary-row';
+        row.style.cssText = 'margin-top:-4px;margin-bottom:4px;display:flex;gap:6px;align-items:center';
+        row.innerHTML = `
+          <input type="text" id="new-int-name" placeholder="e.g. Alex Young Consulting" style="flex:1;padding:7px 9px;border:1.5px solid var(--black);border-radius:7px;font-family:'DM Sans',sans-serif;font-size:12px;background:var(--white);color:var(--black)" />
+          <input type="url" id="new-int-website" placeholder="https://example.com" style="flex:1;padding:7px 9px;border:1.5px solid var(--border);border-radius:7px;font-family:'DM Sans',sans-serif;font-size:12px;background:var(--white);color:var(--black)" />
+          <button type="button" id="new-int-save" style="background:var(--black);color:var(--green);border:none;padding:7px 12px;border-radius:7px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:11px;cursor:pointer;white-space:nowrap">Add</button>
+        `;
+        this.parentElement.appendChild(row);
+        document.getElementById('new-int-name').focus();
+        document.getElementById('new-int-save').addEventListener('click', () => addNewIntermediary());
+        document.getElementById('new-int-name').addEventListener('keydown', (e) => { if(e.key==='Enter'){e.preventDefault();addNewIntermediary();} });
+      }
+    } else {
+      if (existing) existing.remove();
+    }
+  });
 
   setStatus('Scanning page…', '');
 
@@ -177,6 +232,47 @@ function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
 }
 
+// ─── Add new intermediary on the fly ───
+async function addNewIntermediary() {
+  const nameEl = document.getElementById('new-int-name');
+  const websiteEl = document.getElementById('new-int-website');
+  const saveBtn = document.getElementById('new-int-save');
+  const name = nameEl ? nameEl.value.trim() : '';
+  const website = websiteEl ? websiteEl.value.trim() : '';
+  if (!name) { nameEl.style.borderColor = 'var(--red)'; return; }
+
+  saveBtn.disabled = true;
+  saveBtn.textContent = '…';
+
+  // Create a slug from the name
+  const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+
+  // Try to save to Supabase intermediaries table
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/intermediaries`, {
+      method: 'POST',
+      headers: { ...SB_HEADERS, 'Prefer': 'resolution=merge-duplicates,return=representation' },
+      body: JSON.stringify({ id, name, website: website || null, tier: 2, category: 'agency', paid: false }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const [saved] = await res.json();
+
+    // Add to local list and refresh dropdown
+    INTERMEDIARIES.push({ id: saved.id, name: saved.name, tier: saved.tier || 2 });
+    const newIntRow = document.getElementById('new-intermediary-row');
+    if (newIntRow) newIntRow.remove();
+    populateOrgDropdown(saved.id);
+    setStatus(`Added "${saved.name}" — now select and save contact`, 'ok');
+  } catch (err) {
+    // Fallback: add locally only (no Supabase intermediaries table yet)
+    INTERMEDIARIES.push({ id, name, tier: 2 });
+    const newIntRow = document.getElementById('new-intermediary-row');
+    if (newIntRow) newIntRow.remove();
+    populateOrgDropdown(id);
+    setStatus(`"${name}" added locally`, 'ok');
+  }
+}
+
 // ─── Save handler ───
 formEl.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -185,6 +281,14 @@ formEl.addEventListener('submit', async (e) => {
   btn.textContent = 'Saving…';
   resultEl.className = 'result';
   resultEl.style.display = 'none';
+
+  // Block submit if "Add new" is still selected without saving
+  if ($('org_id').value === '__new__') {
+    showResult('Please add and save the new intermediary first, then save the contact.', 'err');
+    btn.disabled = false;
+    btn.textContent = 'Save contact';
+    return;
+  }
 
   const record = {
     org_id: $('org_id').value,
