@@ -54,7 +54,7 @@ function showResult(html, cls) {
 async function loadIntermediaries() {
   try {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/intermediaries?select=id,name,tier,category,website&order=tier.asc,name.asc`,
+      `${SUPABASE_URL}/rest/v1/intermediary_orgs?select=id,name,tier,category,website&order=tier.asc,name.asc`,
       { headers: SB_HEADERS }
     );
     if (res.ok) {
@@ -249,7 +249,7 @@ async function addNewIntermediary() {
 
   // Try to save to Supabase intermediaries table
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/intermediaries`, {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/intermediary_orgs`, {
       method: 'POST',
       headers: { ...SB_HEADERS, 'Prefer': 'resolution=merge-duplicates,return=representation' },
       body: JSON.stringify({ id, name, website: website || null, tier: 2, category: 'agency', paid: false }),
