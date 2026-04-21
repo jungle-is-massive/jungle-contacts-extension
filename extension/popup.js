@@ -156,8 +156,11 @@ async function getProfileFromTab() {
 }
 
 async function init() {
-  await loadIntermediaries();
+  // Populate immediately from hardcoded fallback — no wait, no flicker
   populateOrgDropdown();
+
+  // Load live orgs from Supabase in the background; refresh dropdown when done
+  loadIntermediaries().then(() => populateOrgDropdown()).catch(() => {});
 
   // Wire up the "Add new intermediary" inline handler
   $('org_id').addEventListener('change', function() {
