@@ -16,6 +16,41 @@ const SB_HEADERS = {
 };
 const PLAN_URL = 'https://jungle-is-massive.github.io/intermediary-plan/';
 
+// ── HubSpot config ──────────────────────────────────────────────
+// We write contacts to HubSpot via a Make.com webhook so we never
+// expose a private HubSpot API token in the extension.
+const MAKE_WEBHOOK_URL = 'https://hook.eu1.make.com/0pw21mpqnhp4mry2wsy7fifldrdo36hm';
+// (Set this to your actual Make.com webhook URL after creating the scenario)
+
+const INTERMEDIARY_ORG_IDS = new Set([
+  'aar','ingenuity','creativebrief','oystercatchers','observatory',
+  'tuffon','auditstar','individual_consultants','gonetwork','masterclassing','adassoc'
+]);
+
+// ── Contact type state ───────────────────────────────────────────
+let currentContactType = 'intermediary';
+
+function setContactType(type, btn) {
+  currentContactType = type;
+  document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+
+  const isIntermediary = type === 'intermediary';
+  const needsSourceName = ['Referral','Speaking / Event'].includes(type);
+
+  document.getElementById('field-org').style.display         = isIntermediary ? '' : 'none';
+  document.getElementById('field-source-name').style.display = needsSourceName ? '' : 'none';
+  document.getElementById('field-role').style.display        = isIntermediary ? '' : 'none';
+  document.getElementById('field-influence').style.display   = isIntermediary ? '' : 'none';
+
+  if (needsSourceName) {
+    const labelMap = { 'Referral': 'Referred by', 'Speaking / Event': 'Event name' };
+    document.getElementById('source-name-label').textContent = labelMap[type] || 'Source';
+    document.getElementById('source_name').placeholder = type === 'Referral' ? 'e.g. Jane Smith' : 'e.g. Cannes Lions';
+  }
+}
+
+
 // Must match the IDs hardcoded in the intermediary-plan page.
 // If you add new intermediaries there, mirror them here.
 // Loaded from Supabase at runtime — this is the fallback if Supabase is unreachable.
@@ -285,34 +320,65 @@ formEl.addEventListener('submit', async (e) => {
   resultEl.style.display = 'none';
 
   // Block submit if "Add new" is still selected without saving
-  if ($('org_id').value === '__new__') {
+  if (currentContactType === 'intermediary' && $('org_id').value === '__new__') {
     showResult('Please add and save the new intermediary first, then save the contact.', 'err');
     btn.disabled = false;
     btn.textContent = 'Save contact';
     return;
   }
 
-  const record = {
-    org_id: $('org_id').value,
-    name: $('name').value.trim(),
-    title: $('title').value.trim() || null,
-    role: $('role').value.trim() || null,
-    warmth: $('warmth').value,
-    influence: $('influence').value,
-    linkedin_url: $('linkedin_url').value.trim() || null,
-    notes: $('notes').value.trim() || null,
-    source: 'chrome-extension',
-  };
+  const isIntermediary = currentContactType === 'intermediary';
 
-  if (!record.org_id || !record.name) {
-    showResult('Intermediary and name are required.', 'err');
+  // Build record depending on contact type
+  const name = $('name').value.trim();
+  if (!name) {
+    showResult('Name is required.', 'err');
+    btn.disabled = false;
+    btn.textContent = 'Save contact';
+    return;
+  }
+  if (isIntermediary && !$('org_id').value) {
+    showResult('Please select an intermediary.', 'err');
     btn.disabled = false;
     btn.textContent = 'Save contact';
     return;
   }
 
+  const record = isIntermediary ? {
+    // → intermediary_people
+    org_id:      $('org_id').value,
+    name,
+    title:       $('title').value.trim() || null,
+    role:        $('role').value.trim()  || null,
+    warmth:      $('warmth').value,
+    influence:   $('influence').value,
+    linkedin_url: $('linkedin_url').value.trim() || null,
+    email:       $('email').value.trim() || null,
+    notes:       $('notes').value.trim() || null,
+    source:      'chrome-extension',
+  } : {
+    // → contacts (unified table)
+    full_name:   name,
+    first_name:  name.split(' ')[0],
+    last_name:   name.split(' ').slice(1).join(' ') || null,
+    title:       $('title').value.trim() || null,
+    company:     $('company').value.trim() || null,
+    linkedin_url: $('linkedin_url').value.trim() || null,
+    email:       $('email').value.trim() || null,
+    notes:       $('notes').value.trim() || null,
+    source_type: currentContactType,
+    source_name: $('source_name').value.trim() || null,
+    source:      'chrome-extension',
+  };
+
+  if (!record) {
+
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/intermediary_people`, {
+    const isIntermediary = currentContactType === 'intermediary';
+    const table = isIntermediary ? 'intermediary_people' : 'contacts';
+
+    // 1. Save to Supabase
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
       method: 'POST',
       headers: { ...SB_HEADERS, 'Prefer': 'return=representation' },
       body: JSON.stringify(record),
@@ -322,9 +388,31 @@ formEl.addEventListener('submit', async (e) => {
       throw new Error(errText || `HTTP ${res.status}`);
     }
     const [saved] = await res.json();
-    const orgName = INTERMEDIARIES.find(i => i.id === record.org_id)?.name || record.org_id;
+
+    // 2. Dual-write to HubSpot via Make.com webhook (fire-and-forget)
+    const hsPayload = {
+      firstname:   record.first_name || record.name?.split(' ')[0] || '',
+      lastname:    record.last_name  || record.name?.split(' ').slice(1).join(' ') || '',
+      email:       record.email || '',
+      company:     record.company || (isIntermediary ? (INTERMEDIARIES.find(i=>i.id===record.org_id)?.name||'') : ''),
+      jobtitle:    record.title || '',
+      linkedin:    record.linkedin_url || '',
+      source_type: isIntermediary ? 'Intermediary' : currentContactType,
+      source_name: isIntermediary ? (INTERMEDIARIES.find(i=>i.id===record.org_id)?.name||'') : (record.source_name||''),
+      notes:       record.notes || '',
+      supabase_id: saved.id,
+    };
+    fetch(MAKE_WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(hsPayload),
+    }).catch(() => {}); // silent fail — Supabase write is the source of truth
+
+    const orgName = isIntermediary
+      ? (INTERMEDIARIES.find(i => i.id === record.org_id)?.name || record.org_id)
+      : currentContactType;
     showResult(
-      `Saved ${saved.name} to ${orgName}.  <a href="${PLAN_URL}" target="_blank">View plan →</a>`,
+      `Saved ${saved.name || saved.full_name} to ${orgName}.  <a href="${PLAN_URL}" target="_blank">View plan →</a>`,
       'ok'
     );
     btn.textContent = 'Saved ✓';
