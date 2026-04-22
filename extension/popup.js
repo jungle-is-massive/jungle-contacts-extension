@@ -130,24 +130,23 @@ async function getProfileFromTab() {
     }
   };
 
-  // Poll up to 4s, every 250ms, looking for a result that has both name AND title.
-  // LinkedIn often renders the page in stages: name appears first, then headline.
+  // Poll up to 1.5s, every 150ms. Return as soon as we have a name.
+  // Title loads slightly later on LinkedIn — we fill it in from whatever we get.
   const start = Date.now();
-  const TIMEOUT = 4000;
-  const INTERVAL = 250;
+  const TIMEOUT = 1500;
+  const INTERVAL = 150;
   let result = null;
   let bestSoFar = null;
 
   while (Date.now() - start < TIMEOUT) {
     result = await tryScrape();
     if (result && result.ok) {
-      // Track the most-complete result we've seen, in case we time out
       if (!bestSoFar || (result.data?.name && !bestSoFar.data?.name) ||
           (result.data?.title && !bestSoFar.data?.title)) {
         bestSoFar = result;
       }
-      // If we have both name and title, we're done
-      if (result.data?.name && result.data?.title) return result;
+      // Return as soon as we have a name — title is a bonus, not a blocker
+      if (result.data?.name) return result;
     }
     await new Promise(r => setTimeout(r, INTERVAL));
   }
