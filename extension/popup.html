@@ -8,103 +8,56 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
-    --cream: #F5F2EB;
-    --black: #111110;
-    --green: #8BFF57;
-    --green-dim: #5acc30;
-    --white: #FAFAF7;
-    --grey-light: #ECEAE3;
-    --grey: #C8C4BB;
-    --grey-mid: #888580;
-    --border: #E2DFD8;
-    --red: #e05c5c;
-    --amber: #f5a623;
+    --cream: #F5F2EB; --black: #111110; --green: #8BFF57; --green-dim: #5acc30;
+    --white: #FAFAF7; --grey-light: #ECEAE3; --grey: #C8C4BB; --grey-mid: #888580;
+    --border: #E2DFD8; --red: #e05c5c; --amber: #f5a623; --blue: #3b82f6;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    width: 380px;
-    font-family: 'DM Sans', system-ui, sans-serif;
-    background: var(--cream);
-    color: var(--black);
-    font-size: 13px;
-  }
-
-  /* HEADER */
-  .hdr {
-    background: var(--black);
-    padding: 14px 18px;
-    display: flex; justify-content: space-between; align-items: center;
-  }
+  body { width: 380px; font-family: 'DM Sans', system-ui, sans-serif; background: var(--cream); color: var(--black); font-size: 13px; }
+  .hdr { background: var(--black); padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; }
   .hdr .wordmark { font-size: 13px; font-weight: 800; color: var(--green); letter-spacing: -0.01em; }
   .hdr .wordmark span { color: rgba(255,255,255,0.4); font-weight: 400; }
   .hdr .label { font-family: 'DM Mono', monospace; font-size: 9px; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.12em; }
-
-  /* BODY */
-  .body { padding: 16px 18px 18px; }
-  .status {
-    font-family: 'DM Mono', monospace; font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em;
-    color: var(--grey-mid); margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
-  }
-  .status::before {
-    content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--amber);
-  }
+  .body { padding: 14px 18px 18px; }
+  .status { font-family: 'DM Mono', monospace; font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--grey-mid); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .status::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--amber); }
   .status.ok::before { background: var(--green-dim); }
   .status.err::before { background: var(--red); }
 
-  /* FIELDS */
-  .field { margin-bottom: 11px; }
-  .field label {
-    display: block;
-    font-family: 'DM Mono', monospace; font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em;
-    color: var(--grey-mid); margin-bottom: 4px;
-  }
-  .field input, .field select, .field textarea {
-    width: 100%; padding: 8px 10px;
-    border: 1.5px solid var(--border); border-radius: 7px;
-    font-family: 'DM Sans', sans-serif; font-size: 12px;
-    background: var(--white); color: var(--black);
-  }
-  .field textarea { min-height: 56px; resize: vertical; }
-  .field input:focus, .field select:focus, .field textarea:focus {
-    outline: none; border-color: var(--black);
-  }
+  /* Contact type selector */
+  .type-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 12px; }
+  .type-btn { padding: 7px 8px; border: 1.5px solid var(--border); border-radius: 8px; background: var(--white); font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 600; cursor: pointer; text-align: center; transition: all .12s; color: var(--grey-mid); }
+  .type-btn.active { border-color: var(--black); background: var(--black); color: var(--green); }
+  .type-btn:hover:not(.active) { border-color: var(--grey-mid); color: var(--black); }
+
+  .field { margin-bottom: 10px; }
+  .field label { display: block; font-family: 'DM Mono', monospace; font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--grey-mid); margin-bottom: 4px; }
+  .field input, .field select, .field textarea { width: 100%; padding: 8px 10px; border: 1.5px solid var(--border); border-radius: 7px; font-family: 'DM Sans', sans-serif; font-size: 12px; background: var(--white); color: var(--black); }
+  .field textarea { min-height: 52px; resize: vertical; }
+  .field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: var(--black); }
   .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-
   .required::after { content: ' *'; color: var(--red); }
+  .field-hidden { display: none; }
 
-  /* BUTTONS */
-  .actions { display: flex; gap: 6px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
-  button {
-    flex: 1;
-    padding: 9px 12px; border-radius: 100px; border: none;
-    font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 700;
-    cursor: pointer; letter-spacing: -0.005em;
-    transition: background 0.12s, color 0.12s, border-color 0.12s;
-  }
+  .actions { display: flex; gap: 6px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); }
+  button { flex: 1; padding: 9px 12px; border-radius: 100px; border: none; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 700; cursor: pointer; letter-spacing: -0.005em; transition: background 0.12s, color 0.12s; }
   .btn-primary { background: var(--black); color: var(--green); }
   .btn-primary:hover:not(:disabled) { background: #000; }
   .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
   .btn-secondary { background: transparent; color: var(--black); border: 1.5px solid var(--border); }
   .btn-secondary:hover { border-color: var(--black); }
-
-  /* TOAST / RESULT */
-  .result {
-    margin-top: 10px; padding: 10px 12px; border-radius: 8px;
-    font-size: 12px; line-height: 1.4;
-    display: none;
-  }
+  .result { margin-top: 10px; padding: 10px 12px; border-radius: 8px; font-size: 12px; line-height: 1.4; display: none; }
   .result.ok { background: rgba(139,255,87,0.15); color: #2d6b00; border: 1px solid rgba(139,255,87,0.4); display: block; }
   .result.err { background: rgba(224,92,92,0.1); color: #9b1c1c; border: 1px solid rgba(224,92,92,0.3); display: block; }
   .result a { color: inherit; font-weight: 700; }
-
-  /* EMPTY / NOT-ON-LINKEDIN STATE */
   .empty { padding: 24px 8px; text-align: center; }
   .empty-title { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
   .empty-desc { font-size: 12px; color: var(--grey-mid); line-height: 1.5; }
+  .divider { height: 1px; background: var(--border); margin: 6px 0 10px; }
+  .section-label { font-family: 'DM Mono', monospace; font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--grey-mid); margin-bottom: 8px; }
 </style>
 </head>
 <body>
-
   <div class="hdr">
     <div class="wordmark">Jungle <span>/</span> Contacts</div>
     <div class="label" id="version-label">v—</div>
@@ -114,10 +67,31 @@
   <div class="status" id="status">Reading profile…</div>
 
   <form id="form" style="display:none">
-    <div class="field">
-      <label class="required">Intermediary</label>
-      <select name="org_id" required id="org_id"></select>
+
+    <!-- Contact type selector -->
+    <div class="section-label">Contact type</div>
+    <div class="type-selector" id="type-selector">
+      <button type="button" class="type-btn active" data-type="intermediary" onclick="setContactType('intermediary',this)">Intermediary</button>
+      <button type="button" class="type-btn" data-type="LinkedIn"          onclick="setContactType('LinkedIn',this)">LinkedIn</button>
+      <button type="button" class="type-btn" data-type="Target Prospect"   onclick="setContactType('Target Prospect',this)">Target Prospect</button>
+      <button type="button" class="type-btn" data-type="Referral"          onclick="setContactType('Referral',this)">Referral</button>
+      <button type="button" class="type-btn" data-type="Personal Contact"  onclick="setContactType('Personal Contact',this)">Personal</button>
+      <button type="button" class="type-btn" data-type="Speaking / Event"  onclick="setContactType('Speaking / Event',this)">Event</button>
     </div>
+
+    <!-- Intermediary-mode: org selector -->
+    <div class="field" id="field-org">
+      <label class="required">Intermediary</label>
+      <select name="org_id" id="org_id"></select>
+    </div>
+
+    <!-- Non-intermediary mode: source name (referrer / event name) -->
+    <div class="field field-hidden" id="field-source-name">
+      <label id="source-name-label">Source</label>
+      <input name="source_name" type="text" id="source_name" placeholder="" />
+    </div>
+
+    <div class="divider"></div>
 
     <div class="field">
       <label class="required">Name</label>
@@ -126,10 +100,10 @@
 
     <div class="field-row">
       <div class="field">
-        <label>Title</label>
+        <label>Title / role</label>
         <input name="title" type="text" id="title" />
       </div>
-      <div class="field">
+      <div class="field" id="field-role">
         <label>Role</label>
         <input name="role" type="text" id="role" placeholder="e.g. Decision maker" />
       </div>
@@ -144,7 +118,7 @@
           <option value="cold">Cold</option>
         </select>
       </div>
-      <div class="field">
+      <div class="field" id="field-influence">
         <label>Influence</label>
         <select name="influence" id="influence">
           <option value="high">High</option>
@@ -160,8 +134,18 @@
     </div>
 
     <div class="field">
+      <label>Email</label>
+      <input name="email" type="email" id="email" />
+    </div>
+
+    <div class="field">
+      <label>Company</label>
+      <input name="company" type="text" id="company" />
+    </div>
+
+    <div class="field">
       <label>Notes</label>
-      <textarea name="notes" id="notes" placeholder="Why they matter, next step, anything that helps future-you…"></textarea>
+      <textarea name="notes" id="notes" placeholder="Why they matter, next step, anything useful…"></textarea>
     </div>
 
     <div class="actions">
@@ -174,7 +158,7 @@
 
   <div class="empty" id="empty" style="display:none">
     <div class="empty-title">Open a LinkedIn profile</div>
-    <div class="empty-desc">Navigate to any <strong>linkedin.com/in/…</strong> profile, then click the extension again to add them.</div>
+    <div class="empty-desc">Navigate to any <strong>linkedin.com/in/…</strong> profile, then click the extension again.</div>
   </div>
 </div>
 
