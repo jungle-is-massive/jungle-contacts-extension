@@ -381,8 +381,6 @@ formEl.addEventListener('submit', async (e) => {
     source:      'chrome-extension',
   };
 
-  if (!record) {
-
   try {
     const isIntermediary = currentContactType === 'intermediary';
     const table = isIntermediary ? 'intermediary_people' : 'contacts';
