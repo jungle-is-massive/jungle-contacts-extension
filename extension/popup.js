@@ -196,6 +196,10 @@ async function init() {
   // Load live orgs from Supabase in the background; refresh dropdown when done
   loadIntermediaries().then(() => populateOrgDropdown()).catch(() => {});
 
+  // Ensure field visibility is correct for default type
+  const defaultBtn = document.querySelector('.type-btn[data-type="intermediary"]');
+  if (defaultBtn) setContactType('intermediary', defaultBtn);
+
   // Wire up the "Add new intermediary" inline handler
   $('org_id').addEventListener('change', function() {
     const existing = document.getElementById('new-intermediary-row');
@@ -220,12 +224,18 @@ async function init() {
   });
 
   setStatus('Scanning page…', '');
+  // Keep status visible for up to 1.5s, then show form regardless
 
   const result = await getProfileFromTab();
 
+  // Always show the form — pre-fill from LinkedIn if found, empty otherwise
+  statusEl.style.display = 'none';
+
   if (!result || !result.ok) {
-    statusEl.style.display = 'none';
-    emptyEl.style.display = 'block';
+    // Not on a LinkedIn profile — show form empty for manual entry
+    // Default to LinkedIn type, user can switch
+    setContactType('LinkedIn', document.querySelector('.type-btn[data-type="LinkedIn"]'));
+    formEl.style.display = 'block';
     return;
   }
 
