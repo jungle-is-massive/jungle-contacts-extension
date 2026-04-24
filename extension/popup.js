@@ -196,6 +196,12 @@ async function init() {
   // Load live orgs from Supabase in the background; refresh dropdown when done
   loadIntermediaries().then(() => populateOrgDropdown()).catch(() => {});
 
+  // Wire up contact type buttons via JS (inline onclick blocked by extension CSP)
+  document.getElementById('type-selector').addEventListener('click', (e) => {
+    const btn = e.target.closest('.type-btn');
+    if (btn) setContactType(btn.dataset.type, btn);
+  });
+
   // Ensure field visibility is correct for default type
   const defaultBtn = document.querySelector('.type-btn[data-type="intermediary"]');
   if (defaultBtn) setContactType('intermediary', defaultBtn);
