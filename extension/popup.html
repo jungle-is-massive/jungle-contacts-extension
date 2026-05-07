@@ -50,7 +50,18 @@
   .result.ok { background: rgba(139,255,87,0.15); color: #2d6b00; border: 1px solid rgba(139,255,87,0.4); display: block; }
   .result.err { background: rgba(224,92,92,0.1); color: #9b1c1c; border: 1px solid rgba(224,92,92,0.3); display: block; }
   .result a { color: inherit; font-weight: 700; }
-  .empty { padding: 24px 8px; text-align: center; }
+  .tab-bar { display: flex; border-bottom: 1px solid var(--border); background: var(--white); }
+  .tab-btn { flex: 1; padding: 9px 8px; border: none; background: none; font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 700; color: var(--grey-mid); cursor: pointer; border-bottom: 2px solid transparent; transition: color .12s, border-color .12s; letter-spacing: 0.01em; }
+  .tab-btn:hover { color: var(--black); }
+  .tab-active { color: var(--black) !important; border-bottom-color: var(--black) !important; }
+
+  /* Pipeline panel */
+  #pipeline-panel { display: none; padding: 14px 18px 18px; }
+  .pipe-type-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 14px; }
+  .pipe-type-btn { padding: 8px; border: 1.5px solid var(--border); border-radius: 8px; background: var(--white); font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 700; cursor: pointer; text-align: center; color: var(--grey-mid); transition: all .12s; }
+  .pipe-type-btn.active { border-color: var(--black); background: var(--black); color: var(--green); }
+  .pipe-stage-note { font-family: 'DM Mono', monospace; font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--grey-mid); margin-bottom: 12px; }
+
   .empty-title { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
   .empty-desc { font-size: 12px; color: var(--grey-mid); line-height: 1.5; }
   .divider { height: 1px; background: var(--border); margin: 6px 0 10px; }
@@ -61,6 +72,11 @@
   <div class="hdr">
     <div class="wordmark">Jungle <span>/</span> Contacts</div>
     <div class="label" id="version-label">v—</div>
+  </div>
+
+  <div class="tab-bar">
+    <button class="tab-btn tab-active" id="tab-contacts" type="button">Contacts</button>
+    <button class="tab-btn" id="tab-pipeline" type="button">Pipeline</button>
   </div>
 
 <div class="body" id="body">
@@ -160,6 +176,91 @@
     <div class="empty-title">Open a LinkedIn profile</div>
     <div class="empty-desc">Navigate to any <strong>linkedin.com/in/…</strong> profile, then click the extension again.</div>
   </div>
+</div>
+
+<!-- Pipeline panel -->
+<div id="pipeline-panel">
+  <div class="pipe-type-selector" id="pipe-type-selector">
+    <button type="button" class="pipe-type-btn active" data-pipe="opportunity">New Opportunity</button>
+    <button type="button" class="pipe-type-btn" data-pipe="deal">New Deal</button>
+  </div>
+  <div class="pipe-stage-note" id="pipe-stage-note">Agency Pipeline → Cold outreach</div>
+
+  <form id="pipe-form">
+    <div class="field">
+      <label class="required">Brand / Company</label>
+      <input type="text" id="pipe-company" name="pipe_company" placeholder="e.g. Nike" required />
+    </div>
+    <div class="field">
+      <label>Contact name at brand</label>
+      <input type="text" id="pipe-contact" name="pipe_contact" placeholder="e.g. Sarah Ahmed" />
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Deal source</label>
+        <select id="pipe-source" name="pipe_source">
+          <option value="">Select…</option>
+          <option value="Cold Inbound">Cold Inbound</option>
+          <option value="Client Referral">Client Referral</option>
+          <option value="Staff Referral">Staff Referral</option>
+          <option value="Intermediary">Intermediary</option>
+          <option value="Owned event">Owned Event</option>
+          <option value="Speaking event">Speaking Event</option>
+          <option value="Paid/SEO">Paid / SEO</option>
+          <option value="Organic social">Organic Social</option>
+          <option value="PR">PR</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Relationship type</label>
+        <select id="pipe-relationship" name="pipe_relationship">
+          <option value="">Select…</option>
+          <option value="Personal contact">Personal contact</option>
+          <option value="Past client">Past client</option>
+          <option value="Event">Event</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+    </div>
+    <div class="field field-hidden" id="pipe-field-referred">
+      <label>Who has the in? (referred by)</label>
+      <input type="text" id="pipe-referred" name="pipe_referred" placeholder="e.g. Jade Smith" />
+    </div>
+    <div class="field">
+      <label>Sector</label>
+      <select id="pipe-sector" name="pipe_sector">
+        <option value="">Select…</option>
+        <option value="ADVERTISING_AND_MARKETING">Advertising &amp; Marketing</option>
+        <option value="AUTOMOTIVE">Automotive</option>
+        <option value="BEAUTY">Beauty &amp; Personal Care</option>
+        <option value="CHARITY">Charity &amp; Non-profit</option>
+        <option value="CONSUMER_GOODS">Consumer Goods &amp; FMCG</option>
+        <option value="FASHION">Fashion &amp; Apparel</option>
+        <option value="FINANCIAL_SERVICES">Financial Services</option>
+        <option value="FOOD_AND_BEVERAGE">Food &amp; Beverage</option>
+        <option value="GAMING">Gaming</option>
+        <option value="HEALTH_AND_WELLNESS">Health &amp; Wellness</option>
+        <option value="MEDIA_AND_ENTERTAINMENT">Media &amp; Entertainment</option>
+        <option value="PUBLIC_SECTOR">Government &amp; Public Sector</option>
+        <option value="RETAIL">Retail &amp; E-commerce</option>
+        <option value="SPORT_AND_LEISURE">Sport &amp; Leisure</option>
+        <option value="TECHNOLOGY">Technology &amp; SaaS</option>
+        <option value="TELECOMS">Telecoms</option>
+        <option value="TRAVEL_AND_HOSPITALITY">Travel &amp; Hospitality</option>
+        <option value="UTILITIES_AND_ENERGY">Utilities &amp; Energy</option>
+        <option value="OTHER">Other</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Notes / context</label>
+      <textarea id="pipe-notes" name="pipe_notes" placeholder="What's the angle, timing, why now…"></textarea>
+    </div>
+    <div class="actions">
+      <button type="button" class="btn-secondary" id="pipe-cancel-btn">Close</button>
+      <button type="submit" class="btn-primary" id="pipe-save-btn">Save to HubSpot</button>
+    </div>
+    <div class="result" id="pipe-result"></div>
+  </form>
 </div>
 
 <script src="popup.js"></script>

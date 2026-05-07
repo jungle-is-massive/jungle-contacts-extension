@@ -449,3 +449,101 @@ try {
 } catch (_) { /* ignore */ }
 
 init();
+
+// ─── Pipeline tab (New Deal / New Opportunity) ───────────────────────────────
+
+const PIPELINE_WEBHOOK = 'https://hook.eu1.make.com/i4kegs7g8e4dvcj8tmruukd7xylg1bcg';
+
+let currentPipeType = 'opportunity';
+
+const PIPE_STAGE_NOTES = {
+  opportunity: 'Agency Pipeline → Cold outreach',
+  deal: 'Agency Pipeline → Warm',
+};
+
+// Tab switching
+document.getElementById('tab-contacts').addEventListener('click', () => {
+  document.getElementById('tab-contacts').classList.add('tab-active');
+  document.getElementById('tab-pipeline').classList.remove('tab-active');
+  document.getElementById('body').style.display = '';
+  document.getElementById('pipeline-panel').style.display = 'none';
+});
+
+document.getElementById('tab-pipeline').addEventListener('click', () => {
+  document.getElementById('tab-pipeline').classList.add('tab-active');
+  document.getElementById('tab-contacts').classList.remove('tab-active');
+  document.getElementById('body').style.display = 'none';
+  document.getElementById('pipeline-panel').style.display = 'block';
+});
+
+// Pipeline type selector
+document.getElementById('pipe-type-selector').addEventListener('click', (e) => {
+  const btn = e.target.closest('.pipe-type-btn');
+  if (!btn) return;
+  currentPipeType = btn.dataset.pipe;
+  document.querySelectorAll('.pipe-type-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('pipe-stage-note').textContent = PIPE_STAGE_NOTES[currentPipeType];
+});
+
+// Show/hide "referred by" when source = Staff Referral
+document.getElementById('pipe-source').addEventListener('change', function () {
+  const referredField = document.getElementById('pipe-field-referred');
+  referredField.style.display = this.value === 'Staff Referral' ? '' : 'none';
+});
+
+// Pipeline form submit
+document.getElementById('pipe-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('pipe-save-btn');
+  const resultEl = document.getElementById('pipe-result');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  resultEl.className = 'result';
+  resultEl.style.display = 'none';
+
+  const company = document.getElementById('pipe-company').value.trim();
+  if (!company) {
+    resultEl.innerHTML = 'Brand / Company is required.';
+    resultEl.className = 'result err';
+    btn.disabled = false;
+    btn.textContent = 'Save to HubSpot';
+    return;
+  }
+
+  const payload = {
+    entry_type: currentPipeType,
+    company,
+    contact_name: document.getElementById('pipe-contact').value.trim() || null,
+    deal_source: document.getElementById('pipe-source').value || null,
+    relationship_type: document.getElementById('pipe-relationship').value || null,
+    referred_by: document.getElementById('pipe-referred').value.trim() || null,
+    sector: document.getElementById('pipe-sector').value || null,
+    notes: document.getElementById('pipe-notes').value.trim() || null,
+  };
+
+  try {
+    const res = await fetch(PIPELINE_WEBHOOK, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    resultEl.innerHTML = `✓ ${currentPipeType === 'opportunity' ? 'Opportunity' : 'Deal'} saved to HubSpot`;
+    resultEl.className = 'result ok';
+    btn.textContent = 'Saved ✓';
+    setTimeout(() => {
+      btn.disabled = false;
+      btn.textContent = 'Save to HubSpot';
+      document.getElementById('pipe-form').reset();
+      document.getElementById('pipe-field-referred').style.display = 'none';
+    }, 2000);
+  } catch (err) {
+    resultEl.innerHTML = 'Save failed: ' + (err.message || String(err));
+    resultEl.className = 'result err';
+    btn.disabled = false;
+    btn.textContent = 'Save to HubSpot';
+  }
+});
+
+document.getElementById('pipe-cancel-btn').addEventListener('click', () => window.close());
