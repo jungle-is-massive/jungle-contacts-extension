@@ -6,7 +6,8 @@
   "permissions": ["activeTab", "scripting", "storage"],
   "host_permissions": [
     "https://www.linkedin.com/*",
-    "https://iehkvlyjumkzccoqqgxl.supabase.co/*"
+    "https://iehkvlyjumkzccoqqgxl.supabase.co/*",
+    "https://api.hubapi.com/*"
   ],
   "action": {
     "default_popup": "popup.html",

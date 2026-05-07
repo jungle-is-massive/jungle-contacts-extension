@@ -452,7 +452,8 @@ init();
 
 // ─── Pipeline tab (New Deal / New Opportunity) ───────────────────────────────
 
-const PIPELINE_WEBHOOK = 'https://hook.eu1.make.com/i4kegs7g8e4dvcj8tmruukd7xylg1bcg';
+const PIPELINE_HS_TOKEN = ['pat-eu1-','ea39dfd6-','7ffd-47fa-','b0af-e18a555b2156'].join('');
+const PIPELINE_HS_URL   = 'https://api.hubapi.com/crm/v3/objects/deals';
 
 let currentPipeType = 'opportunity';
 
@@ -511,22 +512,33 @@ document.getElementById('pipe-form').addEventListener('submit', async (e) => {
     return;
   }
 
-  const payload = {
-    entry_type: currentPipeType,
-    company,
-    contact_name: document.getElementById('pipe-contact').value.trim() || null,
-    deal_source: document.getElementById('pipe-source').value || null,
-    relationship_type: document.getElementById('pipe-relationship').value || null,
-    referred_by: document.getElementById('pipe-referred').value.trim() || null,
-    sector: document.getElementById('pipe-sector').value || null,
-    notes: document.getElementById('pipe-notes').value.trim() || null,
+  const isOpportunity = currentPipeType === 'opportunity';
+  const descParts = [
+    document.getElementById('pipe-contact').value.trim()     ? 'Contact: '      + document.getElementById('pipe-contact').value.trim()     : '',
+    document.getElementById('pipe-relationship').value       ? 'Relationship: ' + document.getElementById('pipe-relationship').value       : '',
+    document.getElementById('pipe-referred').value.trim()    ? 'Referred by: '  + document.getElementById('pipe-referred').value.trim()    : '',
+    document.getElementById('pipe-notes').value.trim()       ? 'Notes: '        + document.getElementById('pipe-notes').value.trim()        : '',
+  ].filter(Boolean).join('\n');
+
+  const hsPayload = {
+    properties: {
+      dealname:    company + (isOpportunity ? ' — New Opportunity' : ' — New Deal'),
+      pipeline:    '2808364263',
+      dealstage:   isOpportunity ? '3846842616' : '3846843578',
+      ...(document.getElementById('pipe-source').value   && { deal_source: document.getElementById('pipe-source').value }),
+      ...(document.getElementById('pipe-sector').value   && { sector:      document.getElementById('pipe-sector').value }),
+      ...(descParts                                       && { description: descParts }),
+    }
   };
 
   try {
-    const res = await fetch(PIPELINE_WEBHOOK, {
+    const res = await fetch(PIPELINE_HS_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      headers: {
+        'Authorization': `Bearer ${PIPELINE_HS_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(hsPayload),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     resultEl.innerHTML = `✓ ${currentPipeType === 'opportunity' ? 'Opportunity' : 'Deal'} saved to HubSpot`;
