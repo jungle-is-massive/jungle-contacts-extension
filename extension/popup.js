@@ -452,8 +452,7 @@ init();
 
 // ─── Pipeline tab (New Deal / New Opportunity) ───────────────────────────────
 
-const PIPELINE_HS_TOKEN = ['pat-eu1-','ea39dfd6-','7ffd-47fa-','b0af-e18a555b2156'].join('');
-const PIPELINE_HS_URL   = 'https://api.hubapi.com/crm/v3/objects/deals';
+const PIPELINE_HS_PROXY = `${SUPABASE_URL}/functions/v1/hs-proxy`;
 
 let currentPipeType = 'opportunity';
 
@@ -532,10 +531,12 @@ document.getElementById('pipe-form').addEventListener('submit', async (e) => {
   };
 
   try {
-    const res = await fetch(PIPELINE_HS_URL, {
+    const res = await fetch(PIPELINE_HS_PROXY, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${PIPELINE_HS_TOKEN}`,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'x-proxy-target': 'hubspot',
+        'x-hs-path': '/crm/v3/objects/deals',
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(hsPayload),
